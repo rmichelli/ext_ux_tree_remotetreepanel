@@ -940,6 +940,16 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
     // }}}
     // {{{
     /**
+     * Message to show on remove request, may be overridden
+     *
+     * @param {Ext.tree.TreeNode} node to remove
+     */
+    ,removeMsg:function(node) {
+        return this.reallyWantText + ' ' + this.deleteText.toLowerCase() + ': <b>' + node.text + '</b>?';
+    }
+    // }}}
+    // {{{
+    /**
      * Sends request to server to remove the node. Node is removed from UI
      * if the server returns success.
      *
@@ -952,7 +962,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
         }
         Ext.Msg.show({
              title:this.deleteText
-            ,msg:this.reallyWantText + ' ' + this.deleteText.toLowerCase() + ': <b>' + node.text + '</b>?'
+            ,msg:this.removeMsg(node)
             ,icon:Ext.Msg.QUESTION
             ,buttons:Ext.Msg.YESNO
             ,scope:this
