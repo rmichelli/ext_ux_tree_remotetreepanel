@@ -68,6 +68,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
     ,expandAllText:'Expand All'
     ,expandText:'Expand'
     ,insertText:'Insert'
+    ,moveText:'Move'
     ,newText:'New'
     ,reallyWantText:'Do you really want to'
     ,reloadText:'Reload'
@@ -909,6 +910,28 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
     // }}}
     // {{{
     /**
+     * Function returning message to show on move request verification, may be overridden
+     *
+     * @param {Ext.tree.TreeNode} node being moved
+     * @param {various} move target
+     */
+    ,moveMsg:function(node, target) {
+        return this.reallyWantText + ' ' + this.moveText.toLowerCase() + ': <b>' + node.text + '</b>?';
+    }
+    // }}}
+    // {{{
+    /**
+     * Function indicating if move request should be verified, may be overridden
+     *
+     * @param {Ext.tree.TreeNode} node being moved
+     * @param {various} move target
+     */
+    ,verifyMove:function (node, target) {
+        return false;
+    }
+    // }}}
+    // {{{
+    /**
      * Requests server to move node. Node move has been initiated at client but
      * has been cancelled. The move is completed if the server returns succes.
      *
@@ -916,31 +939,49 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
      * @private
      */
     ,moveNode:function(e) {
+        var performMove = function () {
+            var params = this.applyBaseParams();
+            params[this.paramNames.cmd] = this.cmdNames.moveNode;
+            params[this.paramNames.id] = e.dropNode.id;
+            params[this.paramNames.target] = e.target.id;
+            params[this.paramNames.point] = e.point;
 
-        var params = this.applyBaseParams();
-        params[this.paramNames.cmd] = this.cmdNames.moveNode;
-        params[this.paramNames.id] = e.dropNode.id;
-        params[this.paramNames.target] = e.target.id;
-        params[this.paramNames.point] = e.point;
+            var o = Ext.apply(this.getOptions(), {
+                 action:'moveNode'
+                ,e:e
+                ,node:e.dropNode
+                ,params:params
+            });
 
-        var o = Ext.apply(this.getOptions(), {
-             action:'moveNode'
-            ,e:e
-            ,node:e.dropNode
-            ,params:params
-        });
+            if(false !== this.fireEvent('beforemoverequest', this, o)) {
+                // set loading indicator
+                e.dropNode.getUI().beforeLoad();
+                Ext.Ajax.request(o);
+            }
+        };
 
-        if(false !== this.fireEvent('beforemoverequest', this, o)) {
-            // set loading indicator
-            e.dropNode.getUI().beforeLoad();
-            Ext.Ajax.request(o);
+        if (this.verifyMove(e.dropNode, e.target)) {
+            Ext.Msg.show({
+                 title:this.moveText
+                ,msg:this.moveMsg(e.dropNode, e.target)
+                ,icon:Ext.Msg.QUESTION
+                ,buttons:Ext.Msg.YESNO
+                ,scope:this
+                ,fn:function(response) {
+                    if('yes' === response) {
+                        performMove.call(this);
+                    }
+                }
+            });
+        } else {
+            performMove.call(this);
         }
 
     } // eo function moveNode
     // }}}
     // {{{
     /**
-     * Message to show on remove request, may be overridden
+     * Function returning message to show on remove request, may be overridden
      *
      * @param {Ext.tree.TreeNode} node to remove
      */
