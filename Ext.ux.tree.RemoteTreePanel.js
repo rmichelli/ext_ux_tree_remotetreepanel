@@ -333,23 +333,25 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
         // {{{
         // create context menu
         if(true === this.editable && true === this.contextMenu) {
-            this.contextMenu = new Ext.menu.Menu([
-                 new Ext.menu.TextItem({text:'', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px'})
-                ,'-'
-                ,this.actions.reloadTree
-                ,this.actions.expandAll
-                ,this.actions.collapseAll
-                ,'-'
-                ,this.actions.expandNode
-                ,this.actions.collapseNode
-                ,'-'
-                ,this.actions.renameNode
-                ,'-'
-                ,this.actions.appendChild
-                ,this.actions.insertChild
-                ,'-'
-                ,this.actions.removeNode
-            ]);
+            this.contextMenu = new Ext.menu.Menu({
+                items: [
+                     new Ext.menu.TextItem({text:'', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px'})
+                    ,'-'
+                    ,this.actions.reloadTree
+                    ,this.actions.expandAll
+                    ,this.actions.collapseAll
+                    ,'-'
+                    ,this.actions.expandNode
+                    ,this.actions.collapseNode
+                    ,'-'
+                    ,this.actions.renameNode
+                    ,'-'
+                    ,this.actions.appendChild
+                    ,this.actions.insertChild
+                    ,'-'
+                    ,this.actions.removeNode
+                ]
+            });
         }
 
         // install event handlers on contextMenu
@@ -706,6 +708,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
             node.select();
             this.actionNode = node;
             var alignEl = node.getUI().getEl();
+            if (!menu.rendered) { menu.render(); }
             var xy = menu.getEl().getAlignToXY(alignEl, 'tl-tl', [0, 18]);
             menu.showAt([e.getXY()[0], xy[1]]);
             e.stopEvent();
