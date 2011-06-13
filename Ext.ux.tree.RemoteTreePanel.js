@@ -81,6 +81,13 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
      * are honored.
      */
 
+     /**
+     * @cfg {Array} menuItemCfg (optional) Config which will be used as the 'items' config for the context menu. May contain
+     * standard menu items or strings of action names. Action names will be replaced with the specified action.
+     * Note: The standard node text display item will always the first in the menu
+     * Example: menuItemCfg: ['renameNode', '-', 'removeNode']
+     */
+
     /**
      * @cfg {Boolean} allowLeafAppend When dragging a node over a leaf the node cannot be appended.
      * If this config option is true then the leaf dragged over is turned into node allowing to append
@@ -207,7 +214,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
 
         // {{{
         // hard coded config (cannot be changed from outside)
-        var config = {};
+        var config = {}, menuItemCfg = this.initialConfig.menuItemCfg; delete this.initialConfig.menuItemCfg;
 
         // todo: add other keys and put them to context menu
         if(!this.keys) {
@@ -333,11 +340,16 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
         // {{{
         // create context menu
         if(true === this.editable && true === this.contextMenu) {
-            this.contextMenu = new Ext.menu.Menu({
-                items: [
-                     new Ext.menu.TextItem({text:'', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px'})
-                    ,'-'
-                    ,this.actions.reloadTree
+            if(menuItemCfg) {
+                Ext.each(menuItemCfg, function(item, index) {
+                    if(Ext.isString(item) && this.actions[item]) {
+                        menuItemCfg[index] = this.actions[item];
+                    }
+                }, this);
+            }
+            else {
+                menuItemCfg = [
+                     this.actions.reloadTree
                     ,this.actions.expandAll
                     ,this.actions.collapseAll
                     ,'-'
@@ -350,8 +362,10 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
                     ,this.actions.insertChild
                     ,'-'
                     ,this.actions.removeNode
-                ]
-            });
+                ];
+            }
+            menuItemCfg.unshift(new Ext.menu.TextItem({text:'Item', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px'}), '-');   // empty text causes menu height issues in FireFox with Extjs 3.3.3
+            this.contextMenu = new Ext.menu.Menu({ items: menuItemCfg });
         }
 
         // install event handlers on contextMenu

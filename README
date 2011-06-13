@@ -1,3 +1,6 @@
 Ext.ux.tree.RemoteTreePanel
 
 original code from http://remotetree.extjs.eu/
+
+master branch is current 3.3.3 version
+extjs-2-2 branch is last working 2.2 version
