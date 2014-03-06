@@ -185,6 +185,16 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
     ,layout:'fit'
 
     /**
+     * @cfg {Function} nodeTextRenderer Function that returns the text to display at top of context menu
+     */
+     ,nodeMenuTextRenderer: function (node) { return Ext.util.Format.ellipsis(node ? node.text : '', this.nodeTextLength); }
+
+    /**
+     * @cfg {Integer} nodeTextLength Length of node text to display at top of context menu
+     */
+    , nodeTextLength:12
+
+    /**
      * @cfg {Object} paramNames Names of parameters sent to server in requests.
      */
     ,paramNames:{
@@ -213,8 +223,13 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
     ,initComponent:function() {
 
         // {{{
-        // hard coded config (cannot be changed from outside)
-        var config = {}, menuItemCfg = this.initialConfig.menuItemCfg; delete this.initialConfig.menuItemCfg;
+        // hard coded config (cannot be changed from outside - except for menuItemCfg and additionalActions)
+        var config = {},
+            menuItemCfg = this.initialConfig.menuItemCfg,
+            additionalActions = this.initialConfig.additionalActions || {};
+
+        delete this.initialConfig.menuItemCfg;
+        delete this.initialConfig.additionalActions;
 
         // todo: add other keys and put them to context menu
         if(!this.keys) {
@@ -279,62 +294,71 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
         // {{{
         // create actions
         if(true === this.editable && !this.actions) {
-            this.actions = {
+            this.actions = Ext.apply(additionalActions, {
                  reloadTree:new Ext.Action({
                      text:this.reloadText
                     ,iconCls:this.reloadIconCls
                     ,scope:this
-                    ,handler:function() {this.root.reload();}
+                    ,handler:function() {this.root.reload();},
+                    ref: 'reloadTreeAction'
                 })
                 ,expandNode:new Ext.Action({
                      text:this.expandText
                     ,iconCls:this.expandIconCls
                     ,scope:this
-                    ,handler:this.onExpandNode
+                    ,handler:this.onExpandNode,
+                    ref: 'expandNodeAction'
                 })
                 ,expandAll:new Ext.Action({
                      text:this.expandAllText
                     ,iconCls:this.expandAllIconCls
                     ,scope:this
-                    ,handler:this.onExpandAll
+                    ,handler:this.onExpandAll,
+                    ref: 'expandAllAction'
                 })
                 ,collapseNode:new Ext.Action({
                      text:this.collapseText
                     ,iconCls:this.collapseIconCls
                     ,scope:this
-                    ,handler:this.onCollapseNode
+                    ,handler:this.onCollapseNode,
+                    ref: 'collapseNodeAction'
                 })
                 ,collapseAll:new Ext.Action({
                      text:this.collapseAllText
                     ,iconCls:this.collapseAllIconCls
                     ,scope:this
-                    ,handler:this.onCollapseAll
+                    ,handler:this.onCollapseAll,
+                    ref: 'collapseAllAction'
                 })
                 ,renameNode:new Ext.Action({
                      text:this.renameText
                     ,iconCls:this.renameIconCls
                     ,scope:this
-                    ,handler:this.onRenameNode
+                    ,handler:this.onRenameNode,
+                    ref: 'renameNodeAction'
                 })
                 ,removeNode:new Ext.Action({
                      text:this.deleteText
                     ,iconCls:this.deleteIconCls
                     ,scope:this
-                    ,handler:this.onRemoveNode
+                    ,handler:this.onRemoveNode,
+                    ref: 'removeNodeAction'
                 })
                 ,appendChild:new Ext.Action({
                      text:this.appendText
                     ,iconCls:this.appendIconCls
                     ,scope:this
-                    ,handler:this.onAppendChild
+                    ,handler:this.onAppendChild,
+                    ref: 'appendChildAction'
                 })
                 ,insertChild:new Ext.Action({
                      text:this.insertText
                     ,iconCls:this.insertIconCls
                     ,scope:this
-                    ,handler:this.onInsertChild
+                    ,handler:this.onInsertChild,
+                    ref: 'insertChildAction'
                 })
-            };
+            });
         }
         // }}}
         // {{{
@@ -364,7 +388,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
                     ,this.actions.removeNode
                 ];
             }
-            menuItemCfg.unshift(new Ext.menu.TextItem({text:'Item', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px'}), '-');   // empty text causes menu height issues in FireFox with Extjs 3.3.3
+            menuItemCfg.unshift(new Ext.menu.TextItem({text:'Item', style:'font-weight:bold;margin:0px 4px 0px 27px;line-height:18px', ref: 'nodeTextItem'}), '-');   // empty text causes menu height issues in FireFox with Extjs 3.3.3
             this.contextMenu = new Ext.menu.Menu({ items: menuItemCfg });
         }
 
@@ -377,8 +401,8 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
                 }}
                 ,show:{scope:this, fn:function() {
                     var node = this.actionNode;
-                    var text = Ext.util.Format.ellipsis(node ? node.text : '', 12);
-                    this.contextMenu.items.item(0).el.update(text);
+                    var text = this.nodeMenuTextRenderer(node);
+                    this.contextMenu.nodeTextItem.el.update(text);
                     this.contextMenu.el.shadow.hide();
                     this.contextMenu.el.shadow.show(this.contextMenu.el);
                 }}
@@ -616,7 +640,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
 
             // set loading indicator
             childNode.getUI().beforeLoad();
-            Ext.Ajax.request(o);
+            this.lastTransId = Ext.Ajax.request(o);
         }
     } // eo function appendChild
     // }}}
@@ -973,7 +997,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
             if(false !== this.fireEvent('beforemoverequest', this, o)) {
                 // set loading indicator
                 e.dropNode.getUI().beforeLoad();
-                Ext.Ajax.request(o);
+                this.lastTransId = Ext.Ajax.request(o);
             }
         };
 
@@ -1042,7 +1066,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
                 if(false !== this.fireEvent('beforeremoverequest', this, o)) {
                     // set loading indicator
                     node.getUI().beforeLoad();
-                    Ext.Ajax.request(o);
+                    this.lastTransId = Ext.Ajax.request(o);
                 }
             }
         });
@@ -1073,7 +1097,7 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
         if(false !== this.fireEvent('beforerenamerequest', this, o)) {
             // set loading indicator
             node.getUI().beforeLoad();
-            Ext.Ajax.request(o);
+            this.lastTransId = Ext.Ajax.request(o);
         }
 
     } // eo function renameNode
@@ -1093,6 +1117,20 @@ Ext.ux.tree.RemoteTreePanel = Ext.extend(Ext.tree.TreePanel, {
             ,buttons:Ext.Msg.OK
         });
     } // eo function showError
+    // }}}
+    // {{{
+    /**
+     * Class Destructor - Aborts any outstanding Ajax requests (identifies by this.lastTransId)
+     *
+     * @private
+     */
+    ,onDestroy:function(){
+        if (this.lastTransId && Ext.Ajax.isLoading(this.lastTransId)) {
+            Ext.Ajax.abort(this.lastTransId);
+        }
+
+        Ext.ux.tree.RemoteTreePanel.superclass.onDestroy.call(this);
+    }
     // }}}
 
 }); // eo extend
